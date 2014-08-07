@@ -1,0 +1,372 @@
+## Remotes
+
+In order to collaborate on any Git project, you need to utilise at least one remote repository. Unlike centralised VCS which require a dedicated server daemon, a Git remote is simply another Git repository. In order to demonstrate this, we first need to understand the concept of a _bare_ repository.
+
+Recall that Git stores the entire repository inside the `.git` directory. Inside this directory are blobs and tree objects which can be traversed to build a snapshot of the entire project. This means that Git doesn't actually _need_ a working tree -- it only uses the working tree to figure out what changes have been made since the last commit. This is easily demonstrated if you delete a file from a repository, and then run `git checkout <file>`. Despite being removed from the file system, Git can still restore the file because it has previously stored it in the repository. You can do the same thing with entire directories and Git will still be able to restore everything by traversing its tree objects.
+
+It is therefore possible to have a repository which can store your project's history without actually having a working tree. This is called a _bare_ repository. Bare repositories are most commonly used as a "central" repository where collaborators can share changes. The mechanism for sharing these changes will be explained in detail in the _Pushing_ and _Pulling_ sections. For now, let's look at creating a bare repository.
+
+```
+$ git init --bare
+Initialised empty Git repository in /home/demo/bare-repo/
+$ ls -l
+total 12
+drwxrwxr-x 1 demo demo   0 May 31 12:58 branches
+-rw-rw-r-- 1 demo demo  66 May 31 12:58 config
+-rw-rw-r-- 1 demo demo  73 May 31 12:58 description
+-rw-rw-r-- 1 demo demo  23 May 31 12:58 HEAD
+drwxrwxr-x 1 demo demo 328 May 31 12:58 hooks
+drwxrwxr-x 1 demo demo  14 May 31 12:58 info
+drwxrwxr-x 1 demo demo  16 May 31 12:58 objects
+drwxrwxr-x 1 demo demo  18 May 31 12:58 refs
+```
+
+Notice how rather than creating a `.git` directory for the repository, `git init --bare` simply treats the current directory as the `.git` directory.
+
+There's really not much to this repository. The only interesting things it contains are a `HEAD` reference which points to the `master` branch (which doesn't exist yet), and a `config` file which has the `bare` flag set to `true`. The other files aren't of much interest to us.
+
+```
+$ find . -type f
+./info/exclude
+./hooks/commit-msg.sample
+./hooks/pre-commit.sample
+./hooks/pre-push.sample
+./hooks/pre-rebase.sample
+./hooks/pre-applypatch.sample
+./hooks/applypatch-msg.sample
+./hooks/post-update.sample
+./hooks/prepare-commit-msg.sample
+./hooks/update.sample
+./description
+./HEAD
+./config
+
+$ cat HEAD
+ref: refs/heads/master
+$ cat config
+[core]
+    repositoryformatversion = 0
+    filemode = true
+    bare = true
+```
+
+So what can we do with this repository? Well, nothing much right now. Git won't let us modify the repository because it doesn't have a working tree to modify. (Note: this isn't strictly true. We could painstakingly use Git's low-level commands to manually create and store objects in Git's data store, but that is beyond the scope of this guide. If you're _really_ interested, read [_Git Internals - Git Objects_](http://git-scm.com/book/en/Git-Internals-Git-Objects)).
+
+```
+$ touch README
+$ git add README
+fatal: This operation must be run in a work tree
+```
+
+The intended use of this repository is for other collaborators to `clone` and `pull` changes from, as well as `push` their own changes to.
+
+### Cloning
+
+Now that we've set up a bare repository, let's look at the concept of _cloning_ a repository. The `git clone` command is really just a shortcut which does a few things for you. With its default configuration, it will:
+
+  1. Create remote-tracking branches for each branch in the remote.
+  2. Check out the branch which is currently active (`HEAD`) on the remote.
+  3. Perform a `git fetch` to update all remote-tracking branches.
+  4. Perform a `git pull` to bring the current branch and working tree up-to-date with the remote.
+
+The `clone` command takes a URL and supports a number of transport protocols including HTTP, SSH, and Git's own protocol. It also supports plain old file paths, which is what we'll use.
+
+```
+$ cd ..
+$ git clone bare-repo/ clone-of-bare-repo
+Cloning into 'clone-of-bare-repo'...
+warning: You appear to have cloned an empty repository.
+done.
+```
+
+Let's inspect this cloned repository to see how Git has set it up.
+
+```
+$ cd clone-of-bare-repo/
+$ find . -type f
+./.git/info/exclude
+./.git/hooks/commit-msg.sample
+./.git/hooks/pre-commit.sample
+./.git/hooks/pre-push.sample
+./.git/hooks/pre-rebase.sample
+./.git/hooks/pre-applypatch.sample
+./.git/hooks/applypatch-msg.sample
+./.git/hooks/post-update.sample
+./.git/hooks/prepare-commit-msg.sample
+./.git/hooks/update.sample
+./.git/description
+./.git/HEAD
+./.git/config
+
+$ cat .git/HEAD
+ref: refs/heads/master
+$ ls -l .git/refs/heads/
+total 0
+$ cat .git/config
+[core]
+    repositoryformatversion = 0
+    filemode = true
+    bare = false
+    logallrefupdates = true
+[remote "origin"]
+    url = /home/demo/bare-repo/
+    fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "master"]
+    remote = origin
+    merge = refs/heads/master
+```
+
+This is quite literally a clone of `bare-repo`. The only difference is that this repository contains a few extra lines in `.git/config`.
+
+First, it contains a `remote` listing for "origin", which is the default name given to a repository's main remote. This tells Git the URL of the repository, and which references it should retrieve when performing a `git fetch`.
+
+Below that is a `branch` listing. This is the configuration for a _remote-tracking branch_. But before we get into that, let's store some data in the remote repository.
+
+### Pushing
+
+We've just cloned a completely empty repository, and we want to start working on it.
+
+```
+$ echo 'Project v1.0' > README
+$ git add README
+$ git commit -m "Add readme"
+[master (root-commit) 5d591d5] Add readme
+ 1 file changed, 1 insertion(+)
+ create mode 100644 README
+```
+
+Notice that even though it didn't _technically_ exist (there was nothing in `.git/refs/heads`), this commit has been made to the `master` branch. That's because the `HEAD` of this repository pointed to `master`, so Git has gone ahead and created the branch for us.
+
+```
+$ cat .git/refs/heads/master
+5d591d5fafd538610291f45bec470d1b4e77891e
+```
+
+Now that we've completed some work, we need to share this with our collaborators who have also cloned this repository. Git makes this really easy.
+
+```
+$ git push origin master
+Counting objects: 3, done.
+Writing objects: 100% (3/3), 231 bytes | 0 bytes/s, done.
+Total 3 (delta 0), reused 0 (delta 0)
+To /home/demo/bare-repo/
+ * [new branch] master -> master
+```
+
+Notice how we specified both the remote (`origin`) and the branch (`master`) that we want Git to push. It _is_ possible to simply run `git push`, but this can be dangerous and is generally advised against. Running `git push` without any arguments can (depending on your configuration) push all remote-tracking branches. This is usually okay, but it can result in you pushing changes which you don't want collaborators to pull. In the worst case, you can destroy other collaborators' changes if you specify the `--force` flag.
+
+So, let's take a look at the remote repository to see what happened.
+
+```
+$ cd ../bare-repo/
+$ cat refs/heads/master
+5d591d5fafd538610291f45bec470d1b4e77891e
+
+$ git show 5d591d5
+commit 5d591d5fafd538610291f45bec470d1b4e77891e
+Author: Joseph Wynn <joseph@wildlyinaccurate.com>
+Date: Sat May 31 14:08:34 2014 +0100
+
+ Add readme
+
+diff --git a/README b/README
+new file mode 100644
+index 0000000..5cecdfb
+--- /dev/null
++++ b/README
+@@ -0,0 +1 @@
++Project v1.0
+```
+
+As we expected, the remote repository now contains a `master` branch which points to the commit that we just created.
+
+Essentially what happened when we ran `git push`, is Git updated the remote's references, and sent it any objects required to build those references. In this case, `git push` updated the remote's `master` to point at `5d591d5`, and sent it the `5d591d5` commit object as well as any tree and blob objects related to that commit.
+
+### Remote-Tracking Branches
+
+As we saw in _Cloning_, a remote-tracking branch is essentially just a few lines in `.git/config`. Let's take a look at those lines again.
+
+```
+[branch "master"]
+    remote = origin
+    merge = refs/heads/master
+```
+
+The line `[branch "master"]` denotes that the following configuration applies to the _local_ `master` branch.
+
+The rest of the configuration specifies that when this remote-tracking branch is fetched, Git should fetch the `master` branch from the `origin` remote.
+
+Besides storing this configuration, Git also stores a local copy of the remote branch. This is simply stored as a reference in `.git/refs/remotes/<remote>/<branch>`. We'll see more about how this works in _Fetching_.
+
+### Fetching
+
+The `git fetch` command is fairly simple. It takes the name of a remote (unless used with the `--all` flag, which fetches all remotes), and retrieves any new references and all objects necessary to complete them.
+
+Recall what a remote's configuration looks like.
+
+```
+[remote "origin"]
+    url = /home/demo/bare-repo/
+    fetch = +refs/heads/*:refs/remotes/origin/*
+```
+
+The `fetch` parameter here specifies a mapping of `<remote-refs>:<local-refs>`. The example above simply states that the references found in origin's `refs/heads/*` should be stored locally in `refs/remotes/origin/*`. We can see this in the repository that we cloned earlier.
+
+```
+$ ls -l .git/refs/remotes/origin/
+total 4
+-rw-rw-r-- 1 demo demo 41 May 31 14:12 master
+```
+
+Let's see a fetch in action to get a better idea of what happens. First, we'll create a new branch on the remote repository.
+
+```
+$ cd ../bare-repo/
+$ git branch feature-branch
+```
+
+Now we'll run `git fetch` from the clone.
+
+```
+$ cd ../clone-of-bare-repo/
+$ git fetch origin
+From /home/demo/bare-repo
+ * [new branch] feature-branch -> origin/feature-branch
+```
+
+This has done a couple of things. First, it has created a reference for the remote branch in `.git/refs/remotes/origin`.
+
+```
+$ cat .git/refs/remotes/origin/feature-branch
+5d591d5fafd538610291f45bec470d1b4e77891e
+```
+
+It has also updated a special file, `.git/FETCH_HEAD` with some important information. We'll talk about this file in more detail soon.
+
+```
+$ cat .git/FETCH_HEAD
+5d591d5fafd538610291f45bec470d1b4e77891e branch 'master' of /home/demo/bare-repo
+5d591d5fafd538610291f45bec470d1b4e77891e not-for-merge branch 'feature-branch' of /home/demo/bare-repo
+```
+
+What is _hasn't_ done is created a local branch. This is because Git understands that even though the remote has a `feature-branch`, you might not want it in your local repository.
+
+But what if we _do_ want a local branch which tracks the remote `feature-branch`? Git makes this easy. If we run `git checkout feature-branch`, rather than failing because no local `feature-branch` exists, Git will see that there is a remote `feature-branch` available and create a local branch for us.
+
+```
+$ git checkout feature-branch
+
+Branch feature-branch set up to track remote branch feature-branch from origin.
+Switched to a new branch 'feature-branch'
+```
+
+Git has done a couple of things for us here. First, it has created a local `feature-branch` reference which points to the same commit as the remote `feature-branch`.
+
+```
+$ cat .git/refs/remotes/origin/feature-branch
+5d591d5fafd538610291f45bec470d1b4e77891e
+$ cat .git/refs/heads/feature-branch
+5d591d5fafd538610291f45bec470d1b4e77891e
+```
+
+It has also created a remote-tracking branch entry in `.git/config`.
+
+```
+$ cat .git/config
+[core]
+    repositoryformatversion = 0
+    filemode = true
+    bare = false
+    logallrefupdates = true
+[remote "origin"]
+    url = /home/demo/bare-repo/
+    fetch = +refs/heads/*:refs/remotes/origin/*
+[branch "master"]
+    remote = origin
+    merge = refs/heads/master
+[branch "feature-branch"]
+    remote = origin
+    merge = refs/heads/feature-branch
+```
+
+### Pulling
+
+The `git pull` command is, like `git clone`, a nice shortcut which essentially just runs a few lower-level commands. In short, with the format `git pull <remote> <branch>`, the `git pull` command does the following:
+
+  1. Runs `git fetch <remote>`.
+  2. Reads `.git/FETCH_HEAD` to figure out if `<branch>` has a remote-tracking branch which should be merged.
+  3. Runs `git merge` if required, otherwise quits with an appropriate message.
+
+At this point, it helps to understand Git's `FETCH_HEAD`. Every time you run `git fetch`, Git stores information about the fetched branches in `.git/FETCH_HEAD`. This is referred to as a _short-lived reference_, because by default Git will override the contents of `FETCH_HEAD` every time you run `git fetch`.
+
+Let's introduce some new commits to our remote repository so that we can see this in practice.
+
+```
+$ git clone bare-repo/ new-clone-of-bare-repo
+Cloning into 'new-clone-of-bare-repo'...
+done.
+
+$ cd new-clone-of-bare-repo/
+$ git checkout feature-branch
+Branch feature-branch set up to track remote branch feature-branch from origin.
+Switched to a new branch 'feature-branch'
+
+$ echo 'Some more information.' >> README
+$ git commit -am "Add more information to readme"
+[feature-branch 7cd83c2] Add more information to readme
+ 1 file changed, 1 insertion(+)
+$ git push origin feature-branch
+Counting objects: 5, done.
+Writing objects: 100% (3/3), 298 bytes | 0 bytes/s, done.
+Total 3 (delta 0), reused 0 (delta 0)
+To /home/demo/bare-repo/
+   5d591d5..7cd83c2  feature-branch -> feature-branch
+```
+
+Now, using the steps outlined earlier, let's manually perform a `git pull` on the other clone to pull in the changes we just introduced.
+
+```
+$ cd ../clone-of-bare-repo/
+$ git fetch origin
+remote: Counting objects: 5, done.
+remote: Total 3 (delta 0), reused 0 (delta 0)
+Unpacking objects: 100% (3/3), done.
+From /home/demo/bare-repo
+   5d591d5..7cd83c2  feature-branch -> origin/feature-branch
+$ cat .git/FETCH_HEAD
+7cd83c29d7360dfc432d556fdbf03eb83ec5158d        branch 'feature-branch' of /home/demo/bare-repo
+5d591d5fafd538610291f45bec470d1b4e77891e    not-for-merge   branch 'master' of /home/demo/bare-repo
+```
+
+At this point, Git has updated our local copy of the remote branch, and updated the information in `FETCH_HEAD`.
+
+```
+$ cat .git/refs/heads/feature-branch
+5d591d5fafd538610291f45bec470d1b4e77891e
+$ cat .git/refs/remotes/origin/feature-branch
+7cd83c29d7360dfc432d556fdbf03eb83ec5158d
+```
+
+We know from `FETCH_HEAD` that the fetch introduced some changes to `feature-branch`. So all that's left to do to complete the "pull" is perform a merge.
+
+```
+$ git merge FETCH_HEAD
+Updating 5d591d5..7cd83c2
+Fast-forward
+ README | 1 +
+ 1 file changed, 1 insertion(+)
+```
+
+And that's it -- we've just performed a `git pull` without actually running `git pull`. Of course, it is much easier to let Git take care of these details. Just to be sure that the outcome is the same, we can run `git pull` as well.
+
+```
+$ git reset --hard HEAD^1
+HEAD is now at 5d591d5 Add readme
+$ git pull origin feature-branch
+From /home/demo/bare-repo
+ * branch            feature-branch -> FETCH_HEAD
+Updating 5d591d5..7cd83c2
+Fast-forward
+ README | 1 +
+ 1 file changed, 1 insertion(+)
+```

@@ -1,0 +1,32 @@
+## Tree Objects
+
+A tree object in Git can be thought of as a directory. It contains a list of blobs (files) and other tree objects (sub-directories). Imagine we had a simple repository, with a `README` file and a `src/` directory containing a `hello.c` file.
+
+```
+README
+src/
+    hello.c
+```
+
+This would be represented by two tree objects: one for the root directory, and another for the `src/` directory. Here's what they would look like.
+
+**tree 4da454**
+
+| type | hash   | name   |
+|------------------------|
+| blob | 976165 | README |
+| tree | 81fc8b | src    |
+
+**tree 81fc8b**
+
+| type | hash   | name    |
+|-------------------------|
+|blob  | 1febef | hello.c |
+
+If we draw the blobs (in green) as well as the tree objects (in blue), we end up with a diagram that looks a lot like our directory structure.
+
+![Git tree graph](images/tree-graph.png)
+
+Notice how given the root tree object, we can recurse through every tree object to figure out the state of the entire working tree. The root tree object, therefore, is essentially a snapshot of your repository at a given time. Usually when Git refers to "the tree", it is referring to the root tree object.
+
+Now let's learn how you can track the history of your repository with commit objects.

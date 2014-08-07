@@ -1,0 +1,219 @@
+## Toolkit
+
+With a solid understanding of Git's inner workings, some of the more advanced Git tools start to make more sense.
+
+### git-reflog
+
+Whenever you make a change in Git that affects the tip of a branch, Git records information about that change in what's called the reflog. Usually you shouldn't need to look at these logs, but sometimes they can come in _very_ handy.
+
+Let's say you have a repository with a few commits.
+
+```
+$ git log --oneline
+d6f2a84 Add empty LICENSE file
+51c4b49 Add some actual content to readme
+3413f46 Add TODO note to readme
+322c826 Add empty readme
+```
+
+You decide, for some reason, to perform a destructive action on your `master` branch.
+
+```
+$ git reset --hard 3413f46
+HEAD is now at 3413f46 Add TODO note to readme
+```
+
+Since performing this action, you've realised that you lost some commits and you have no idea what their hashes were. You never pushed the changes; they were only in your local repository. `git log` is no help, since the commits are no longer reachable from `HEAD`.
+
+```
+$ git log --oneline
+3413f46 Add TODO note to readme
+322c826 Add empty readme
+```
+
+This is where `git reflog` can be useful.
+
+```
+$ git reflog
+3413f46 HEAD@{0}: reset: moving to 3413f46
+d6f2a84 HEAD@{1}: commit: Add empty LICENSE file
+51c4b49 HEAD@{2}: commit: Add some actual content to readme
+3413f46 HEAD@{3}: commit: Add TODO note to readme
+322c826 HEAD@{4}: commit (initial): Add empty readme
+```
+
+The reflog shows a list of all changes to `HEAD` in reverse chronological order. The hash in the first column is the value of `HEAD` _after the action on the right was performed_. We can see, therefore, that we were at commit `d6f2a84` before the destructive change.
+
+How you want to recover commits depends on the situation. In this particular example, we can simply do a `git reset --hard d6f2a84` to restore `HEAD` to its original position. However if we have introduced new commits since the destructive change, we may need to do something like `cherry-pick` all the commits that were lost.
+
+Note that Git's reflog is only a record of changes **for your local repository**. If your local repository becomes corrupt or is deleted, the reflog won't be of any use (if the repository is deleted the reflog won't exist at all!)
+
+Depending on the situation, you may find `git fsck` more suitable for recovering lost commits.
+
+### git-fsck
+
+In a way, Git's object storage works like a primitive file system -- objects are like files on a hard drive, and their hashes are the objects' physical address on the disk. The Git index is exactly like the index of a file system, in that it contains references which point at an object's physical location.
+
+By this analogy, `git fsck` is aptly named after `fsck` ("file system check"). This tool is able to check Git's database and verify the validity and reachability of every object that it finds.
+
+When a reference (like a branch) is deleted from Git's index, the object(s) they refer to usually aren't deleted, even if they are no longer reachable by any other references. Using a simple example, we can see this in practice. Here we have a branch, `feature-branch`, which points at `f71bb43`. If we delete `feature-branch`, the commit will no longer be reachable.
+
+```
+$ git branch
+  feature-branch
+* master
+$ git rev-parse --short feature-branch
+f71bb43
+$ git branch -D feature-branch
+Deleted branch feature-branch (was f71bb43).
+```
+
+At this point, commit `f71bb43` still exists in our repository, but there are no references pointing to it. By searching through the database, `git fsck` is able to find it.
+
+```
+$ git fsck --lost-found
+Checking object directories: 100% (256/256), done.
+dangling commit f71bb43907bffe0bce2967504341a0ece7a8cb68
+```
+
+For simple cases, `git reflog` may be preferred. Where `git fsck` excels over `git reflog`, though, is when you need to find objects which you never referenced in your local repository (and therefore would not be in your reflog). An example of this is when you delete a remote branch through an interface like GitHub. Assuming the objects haven't been garbage-collected, you can clone the remote repository and use `git fsck` to recover the deleted branch.
+
+### git-stash
+
+`git stash` takes all changes to your working tree and index, and "stashes" them away, giving you a clean working tree. You can then retrieve those changes from your stash and re-apply them to the working tree at any time with `git stash apply`. A common use for the `stash` command is to save some half-finished changes in order to checkout another branch.
+
+This seems fairly simple at first, but the mechanism behind the `stash` command is actually quite complex. Let's build a simple repository to see how it works.
+
+```
+$ git init
+Initialised empty Git repository in /home/demo/demo-repo/.git/
+$ echo 'Foo' > test.txt
+$ git add test.txt
+$ git commit -m "Initial commit"
+[master (root-commit) 2522332] Initial commit
+ 1 file changed, 1 insertion(+)
+ create mode 100644 test.txt
+```
+
+Now let's make some changes, and stash them.
+
+```
+$ echo 'Bar' >> test.txt
+$ git stash
+Saved working directory and index state WIP on master: 2522332 Initial commit
+HEAD is now at 2522332 Initial commit
+```
+
+Stashes in Git are put onto a stack, with the most recently-stashed on top. You can list all current stashes with `git stash list`.
+
+```
+$ git stash list
+stash@{0}: WIP on master: 2522332 Initial commit
+```
+
+Right now we only have one stash: `stash@{0}`. This is actually a reference, which we can inspect.
+
+```
+$ git show stash@{0}
+commit f949b46a417a4f1595a9d12773c89cce4454a958
+Merge: 2522332 1fbe1cc
+Author: Joseph Wynn <joseph@wildlyinaccurate.com>
+Date:   Sat Jul 5 00:15:51 2014 +0100
+
+    WIP on master: 2522332 Initial commit
+
+diff --cc test.txt
+index bc56c4d,bc56c4d..3b71d5b
+--- a/test.txt
++++ b/test.txt
+@@@ -1,1 -1,1 +1,2 @@@
+  Foo
+++Bar
+```
+
+From this we can see that the stash is pointing to a commit object. What's interesting is that the stash commit is a **merge commit**. We'll look into that in a bit, but first: where _is_ this commit?
+
+```
+$ git log --oneline
+2522332 Initial commit
+
+$ git branch
+* master
+
+$ git fsck --lost-found
+Checking object directories: 100% (256/256), done.
+```
+
+It's not in the current branch, and there are no other branches it could be in. `git-fsck` hasn't found any dangling commits, so it must be referenced somewhere. But _where_?
+
+The answer is simple: Git creates a special reference for the stash which isn't seen by commands like `git branch` and `git tag`. This reference lives in `.git/refs/stash`. We can verify this with `git show-ref`.
+
+```
+$ git show-ref
+25223321ec2fbcb718b7fbf99485f1cb4d2f2042 refs/heads/master
+f949b46a417a4f1595a9d12773c89cce4454a958 refs/stash
+```
+
+So why does Git create a merge commit for a stash? The answer is relatively simple: as well as recording the state of the working tree, `git stash` also records the state of the index (also known as the "staging area"). Since it's possible for the index and the working tree to contain changes to the same file, Git needs to store the states separately.
+
+This gives us a history that looks a little like this:
+
+![Stashing](images/stash.png)
+
+In this history graph, the tree of commit **C** contains the changes to the working tree. Commit **C**'s first parent is the commit that `HEAD` pointed to when the stash was created (commit **A**). The second parent (commit **B**) contains the changes to the index. It is with these two commits that Git is able to re-apply your stashed changes.
+
+### git-describe
+
+Git's `describe` command is summed up pretty neatly in the documentation:
+
+> git-describe - Show the most recent tag that is reachable from a commit
+
+This can be helpful for things like build and release scripts, as well as figuring out which version a change was introduced in.
+
+`git describe` will take any reference or commit hash, and return the name of the most recent tag. If the tag points at the commit you gave it, `git describe` will return only the tag name. Otherwise, it will suffix the tag name with some information including the number of commits since the tag and an abbreviation of the commit hash.
+
+```
+$ git describe v1.2.15
+v1.2.15
+$ git describe 2db66f
+v1.2.15-80-g2db66f5
+```
+
+If you want to ensure that only the tag name is returned, you can force Git to remove the suffix by passing `--abbrev=0`.
+
+```
+$ git describe --abbrev=0 2db66f
+v1.2.15
+```
+
+### git-rev-parse
+
+`git rev-parse` is an ancillary plumbing command which takes a wide range of inputs and returns one or more commit hashes. The most common use case is figuring out which commit a tag or branch points to.
+
+```
+$ git rev-parse v1.2.15
+2a46f5e2fbe83ccb47a1cd42b81f815f2f36ee9d
+$ git rev-parse --short v1.2.15
+2a46f5e
+```
+
+### git-bisect
+
+`git bisect` is an indispensable tool when you need to figure out which commit introduced a breaking change. The `bisect` command does a binary search through your commit history to help you find the breaking change as quickly as possible. To get started, simply run `git bisect start`, and tell Git that the commit you're currently on is broken with `git bisect bad`. Then, you can give Git a commit that you know is working with `git bisect good <commit>`.
+
+```
+$ git bisect start
+$ git bisect bad
+$ git bisect good v1.2.15
+Bisecting: 41 revisions left to test after this (roughly 5 steps)
+[b87713687ecaa7a873eeb3b83952ebf95afdd853] docs(misc/index): add header; general links
+```
+
+Git will then checkout a commit and ask you to test whether it's broken or not. If the commit is broken, run `git bisect bad`. If the commit is fine, run `git bisect good`. After doing this a few times, Git will be able to pinpoint the commit which first introduced the breaking change.
+
+```
+$ git bisect bad
+e145a8df72f309d5fb80eaa6469a6148b532c821 is the first bad commit
+```
+
+Once the `bisect` is finished (or when you want to abort it), be sure to run `git bisect reset` to reset `HEAD` to where it was before the `bisect`.

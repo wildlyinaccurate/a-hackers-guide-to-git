@@ -1,0 +1,38 @@
+## Branches
+
+Git's branches are often touted as being one of its strongest features. This is because branches in Git are very lightweight, compared to other VCS where a branch is usually a clone of the entire repository.
+
+The reason branches are so lightweight in Git is because they're just references. We saw in _References_ that the `master` branch was simply a file inside `.git/refs/heads`. Let's create another branch to see what happens under the hood.
+
+```
+$ git branch test-branch
+$ cat .git/refs/heads/test-branch
+d409ca76bc919d9ca797f39ae724b7c65700fd27
+```
+
+It's as simple as that. Git has created a new entry in `.git/refs/heads` and pointed it at the current commit.
+
+We also saw in _References_ that `HEAD` is Git's reference to the current branch. Let's see that in action by switching to our newly-created branch.
+
+```
+$ cat .git/HEAD
+ref: refs/heads/master
+$ git checkout test-branch
+Switched to branch 'test-branch'
+$ cat .git/HEAD
+ref: refs/heads/test-branch
+```
+
+When you create a new commit, Git simply changes the current branch to point to the newly-created commit object.
+
+```
+$ echo 'Some more information here.' >> README
+$ git add README
+$ git commit -m "Update README in a new branch"
+[test-branch 7604067] Update README in a new branch
+ 1 file changed, 1 insertion(+)
+$ cat .git/refs/heads/test-branch
+76040677d717fd090e327681064ac6af9f0083fb
+```
+
+Later on we'll look at the difference between **local branches** and **remote-tracking branches**.

@@ -1,0 +1,48 @@
+## References
+
+In previous sections, we saw how objects in Git are identified by a hash. Since we want to manipulate objects quite often in Git, it's important to know their hashes. You could run all your Git commands referencing each object's hash, like `git show d409ca7`, but that would require you to remember the hash of every object you want to manipulate.
+
+To save you from having to memorize these hashes, Git has references, or "refs". A reference is simply a file stored somewhere in `.git/refs`, containing the hash of a commit object.
+
+To carry on the example from _Commits_, let's figure out the hash of "First commit" using references only.
+
+```
+$ git status
+On branch master
+nothing to commit, working directory clean
+```
+
+`git status` has told us that we are on branch `master`. As we will learn in a later section, branches are just references. We can see this by looking in `.git/refs/heads`.
+
+```
+$ ls -l .git/refs/heads/
+total 4
+-rw-rw-r-- 1 demo demo 41 May 24 20:02 master
+```
+
+We can easily see which commit `master` points to by reading the file.
+
+```
+$ cat .git/refs/heads/master
+d409ca76bc919d9ca797f39ae724b7c65700fd27
+```
+
+Sure enough, `master` contains the hash of the "First commit" object.
+
+Of course, it's possible to simplify this process.Git can tell us which commit a reference is pointing to with the `show` and `rev-parse` commands.
+
+```
+$ git show --oneline master
+d409ca7 First commit
+$ git rev-parse master
+d409ca76bc919d9ca797f39ae724b7c65700fd27
+```
+
+Git also has a special reference, `HEAD`. This is a "symbolic" reference which points to the tip of the current branch rather than an actual commit. If we inspect `HEAD`, we see that it simply points to `refs/head/master`.
+
+```
+$ cat .git/HEAD
+ref: refs/heads/master
+```
+
+It is actually possible for `HEAD` to point directly to a commit object. When this happens, Git will tell you that you are in a "detached HEAD state". We'll talk a bit more about this later, but really all this means is that you're not currently on a branch.

@@ -1,0 +1,32 @@
+## Repositories
+
+At the core of Git, like other VCS, is the repository. A Git repository is really just a simple key-value data store. This is where Git stores, among other things:
+
+  * **Blobs**, which are the most basic data type in Git. Essentially, a blob is just a bunch of bytes; usually a binary representation of a file.
+  * **Tree objects**, which are a bit like directories. Tree objects can contain pointers to blobs and other tree objects.
+  * **Commit objects**, which point to a single tree object, and contain some metadata including the commit author and any parent commits.
+  * **Tag objects**, which point to a single commit object, and contain some metadata.
+  * **References**, which are pointers to a single object (usually a commit or tag object).
+
+You don't need to worry about all of this just yet; we'll cover these things in more detail later.
+
+The important thing to remember about a Git repository is that it exists entirely in a single `.git` directory in your project root. There is no central repository like in Subversion or CVS. This is what allows Git to be a _distributed_ version control system -- everybody has their own self-contained version of a repository.
+
+You can initialize a Git repository anywhere with the `git init` command. Take a look inside the `.git` folder to get a glimpse of what a repository looks like.
+
+```
+$ git init
+Initialized empty Git repository in /home/demo/demo-repository/.git/
+$ ls -l .git
+total 32
+drwxrwxr-x 2 demo demo 4096 May 24 20:10 branches
+-rw-rw-r-- 1 demo demo 92 May 24 20:10 config
+-rw-rw-r-- 1 demo demo 73 May 24 20:10 description
+-rw-rw-r-- 1 demo demo 23 May 24 20:10 HEAD
+drwxrwxr-x 2 demo demo 4096 May 24 20:10 hooks
+drwxrwxr-x 2 demo demo 4096 May 24 20:10 info
+drwxrwxr-x 4 demo demo 4096 May 24 20:10 objects
+drwxrwxr-x 4 demo demo 4096 May 24 20:10 refs
+```
+
+The important directories are `.git/objects`, where Git stores all of its objects; and `.git/refs`, where Git stores all of its references. We'll see how all of this fits together as we learn about the rest of Git. For now, let's learn a little bit more about tree objects.

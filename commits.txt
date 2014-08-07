@@ -1,0 +1,52 @@
+## Commits
+
+A commit object is essentially a pointer that contains a few pieces of important metadata. The commit itself has a hash, which is built from a combination of the metadata that it contains:
+
+  * The hash of the tree (the root tree object) at the time of the commit. As we learned in _Tree Objects_, this means that with a single commit, Git can build the entire working tree by recursing into the tree.
+  * The hash of any parent commits. This is what gives a repository its history: every commit has a parent commit, all the way back to the very first commit.
+  * The author's name and email address, and the time that the changes were authored.
+  * The committer's name and email address, and the time that the commit was made.
+  * The commit message.
+
+Let's see a commit object in action by creating a simple repository.
+
+```
+ $ git init
+Initialized empty Git repository in /home/demo/simple-repository/.git/
+ $ echo 'This is the readme.' > README
+ $ git add README
+ $ git commit -m "First commit"
+[master (root-commit) d409ca7] First commit
+ 1 file changed, 1 insertion(+)
+ create mode 100644 README
+```
+
+When you create a commit, Git will give you the hash of that commit. Using `git show` with the `--format=raw` flag, we can see this newly-created commit's metadata.
+
+```
+$ git show --format=raw d409ca7
+
+commit d409ca76bc919d9ca797f39ae724b7c65700fd27
+tree 9d073fcdfaf07a39631ef94bcb3b8268bc2106b1
+author Joseph Wynn <joseph@wildlyinaccurate.com> 1400976134 -0400
+committer Joseph Wynn <joseph@wildlyinaccurate.com> 1400976134 -0400
+
+    First commit
+
+diff --git a/README b/README
+new file mode 100644
+index 0000000..9761654
+--- /dev/null
++++ b/README
+@@ -0,0 +1 @@
++This is the readme.
+```
+
+Notice how although we referenced the commit by the partial hash `d409ca7`, Git was able to figure out that we actually meant `d409ca76bc919d9ca797f39ae724b7c65700fd27`. This is because the hashes that Git assigns to objects are unique enough to be identified by the first few characters. You can see here that Git is able to find this commit with as few as four characters; after which point Git will tell you that the reference is ambiguous.
+
+```
+$ git show d409c
+$ git show d409
+$ git show d40
+fatal: ambiguous argument 'd40': unknown revision or path not in the working tree.
+```

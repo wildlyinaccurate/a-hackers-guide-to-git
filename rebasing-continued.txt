@@ -1,0 +1,49 @@
+## Rebasing (Continued)
+
+While the example in _Cherry-Picking_ worked, it's not practical. In Git, rebasing allows us to replace our verbose cherry-pick workflow...
+
+```
+$ git checkout master
+$ git checkout -b foo-tmp
+$ git cherry-pick C D
+$ git checkout foo
+$ git reset --hard foo-tmp
+$ git branch -D foo-tmp
+```
+
+...With a single command.
+
+```
+$ git rebase master foo
+```
+
+With the format `git rebase <base> <target>`, the `rebase` command will take all of the commits from `<target>` and play them on top of `<base>` one by one. It does this without actually modifying `<base>`, so the end result is a linear history in which `<base>` can be fast-forwarded to `<target>`.
+
+In a sense, performing a rebase is like telling Git, **"Hey, I want to pretend that `<target>` was actually branched from `<base>`. Take all of the commits from `<target>`, and pretend that they happened _after_ `<base>`"**.
+
+Let's take a look again at the example graph from _Merging_ to see how rebasing can prevent us from having to do a non-fast-forward merge.
+
+![Branching -- after merging hotfix](images/branch-merge-hotfix.png)
+
+All we have to do to enable a fast-forward merge of `feature-branch` into `master` is run `git rebase master feature-branch` before performing the merge.
+
+```
+$ git rebase master feature-branch
+First, rewinding head to replay your work on top of it...
+Applying: Finished the new feature
+```
+
+This has brought `feature-branch` directly upstream of `master`.
+
+![Rebasing -- rebase feature-branch with master](images/rebase-feature.png)
+
+Git is now able to perform a fast-forward merge.
+
+```
+$ git checkout master
+$ git merge feature-branch
+Updating 40837f1..2a534dd
+Fast-forward
+ feature.html | 1 +
+ 1 file changed, 1 insertion(+)
+```

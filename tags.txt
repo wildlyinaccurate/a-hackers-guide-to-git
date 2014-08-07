@@ -1,0 +1,58 @@
+## Tags
+
+There are two types of tags in Git -- **lightweight tags** and **annotated tags**.
+
+On the surface, these two types of tags look very similar. Both of them are references stored in `.git/refs/tags`. However, that's about as far as the similarities go. Let's create a lightweight tag to see how they work.
+
+```
+$ git tag 1.0-lightweight
+$ cat .git/refs/tags/1.0-lightweight
+d409ca76bc919d9ca797f39ae724b7c65700fd27
+```
+
+We can see that Git has created a tag reference which points to the current commit. By default, `git tag` will create a lightweight tag. Note that this is **not a tag object**. We can verify this by using `git cat-file` to inspect the tag.
+
+```
+$ git cat-file -p 1.0-lightweight
+tree 9d073fcdfaf07a39631ef94bcb3b8268bc2106b1
+author Joseph Wynn <joseph@wildlyinaccurate.com> 1400976134 -0400
+committer Joseph Wynn <joseph@wildlyinaccurate.com> 1400976134 -0400
+
+First commit
+$ git cat-file -p d409ca7
+tree 9d073fcdfaf07a39631ef94bcb3b8268bc2106b1
+author Joseph Wynn <joseph@wildlyinaccurate.com> 1400976134 -0400
+committer Joseph Wynn <joseph@wildlyinaccurate.com> 1400976134 -0400
+
+First commit
+```
+
+You can see that as far as Git is concerned, the `1.0-lightweight` tag and the `d409ca7` commit are the _same object_. That's because the lightweight tag is _only a reference_ to the commit object.
+
+Let's compare this to an annotated tag.
+
+```
+$ git tag -a -m "Tagged 1.0" 1.0
+$ cat .git/refs/tags/1.0
+10589beae63c6e111e99a0cd631c28479e2d11bf
+```
+
+We've passed the `-a` (`--annotate`) flag to `git tag` to create an annotated tag. Notice how Git creates a reference for the tag just like the lightweight tag, but this reference is not pointing to the same object as the lightweight tag. Let's use `git cat-file` again to inspect the object.
+
+```
+$ git cat-file -p 1.0
+object d409ca76bc919d9ca797f39ae724b7c65700fd27
+type commit
+tag 1.0
+tagger Joseph Wynn <joseph@wildlyinaccurate.com> 1401029229 -0400
+
+Tagged 1.0
+```
+
+This is a **tag object**, separate to the commit that it points to. As well as containing a pointer to a commit, tag objects also store a tag message and information about the tagger. Tag objects can also be signed with a [GPG key](http://en.wikipedia.org/wiki/GNU_Privacy_Guard) to prevent commit or email spoofing.
+
+Aside from being GPG-signable, there are a few reasons why annotated tags are preferred over lightweight tags.
+
+Probably the most important reason is that annotated tags have their own author information. This can be helpful when you want to know who created the tag, rather than who created the commit that the tag is referring to.
+
+Annotated tags are also timestamped. Since new versions are usually tagged right before they are released, an annotated tag can tell you when a version was released rather than just when the final commit was made.

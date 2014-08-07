@@ -1,0 +1,87 @@
+## Merging
+
+Merging in Git is the process of joining two histories (usually branches) together. Let's start with a simple example. Say you've created a new feature branch from `master`, and done some work on it.
+
+```
+$ git checkout -b feature-branch
+Switched to a new branch 'feature-branch'
+$ vim feature.html
+$ git commit -am "Finished the new feature"
+[feature-branch 0c21359] Finished the new feature
+ 1 file changed, 1 insertion(+)
+```
+
+At the same time, you need to fix an urgent bug. So you create a `hotfix` branch from `master`, and do some work in there.
+
+```
+$ git checkout master
+Switched to branch 'master'
+$ git checkout -b hotfix
+Switched to a new branch 'hotfix'
+$ vim index.html
+$ git commit -am "Fixed some wording"
+[hotfix 40837f1] Fixed some wording
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+```
+
+At this point, the history will look something like this.
+
+![Branching -- hotfix and feature branch](images/branch-feature-hotfix.png)
+
+Now you want to bring the bug fix into `master` so that you can tag it and release it.
+
+```
+$ git checkout master
+Switched to branch 'master'
+$ git merge hotfix
+Updating d939a3a..40837f1
+Fast-forward
+ index.html | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+```
+
+Notice how Git mentions **fast-forward** during the merge. What this means is that all of the commits in `hotfix` were directly upstream from `master`. This allows Git to simply move the `master` pointer up the tree to `hotfix`. What you end up with looks like this.
+
+![Branching -- after merging hotfix](images/branch-merge-hotfix.png)
+
+Now let's try and merge `feature-branch` into `master`.
+
+```
+$ git merge feature-branch
+Merge made by the 'recursive' strategy.
+ feature.html | 1 +
+ 1 file changed, 1 insertion(+)
+```
+
+This time, Git wasn't able to perform a fast-forward. This is because `feature-branch` isn't directly upstream from `master`. This is clear on the graph above, where `master` is at commit **D** which is in a different history tree to `feature-branch` at commit **C**.
+
+So how did Git handle this merge? Taking a look at the log, we see that Git has actually created a new "merge" commit, as well as bringing the commit from `feature-branch`.
+
+```
+$ git log --oneline
+8ad0923 Merge branch 'feature-branch'
+0c21359 Finished the new feature
+40837f1 Fixed some wording
+d939a3a Initial commit
+```
+
+Upon closer inspection, we can see that this is a special kind of commit object -- it has **two parent commits**. This is referred to as a **merge commit**.
+
+```
+$ git show --format=raw 8ad0923
+
+commit 8ad09238b0dff99e8a99c84d68161ebeebbfc714
+tree e5ee97c8f9a4173f07aa4c46cb7f26b7a9ff7a17
+parent 40837f14b8122ac6b37c0919743b1fd429b3bbab
+parent 0c21359730915c7888c6144aa8e9063345330f1f
+author Joseph Wynn <joseph@wildlyinaccurate.com> 1401134489 +0100
+committer Joseph Wynn <joseph@wildlyinaccurate.com> 1401134489 +0100
+
+ Merge branch 'feature-branch'
+```
+
+This means that our history graph now looks something like this (commit **E** is the new merge commit).
+
+![Branching -- after merging feature-branch](images/branch-merge-feature.png)
+
+Some people believe that this sort of history graph is undesirable. In the _Rebasing (Continued)_ section, we'll learn how to prevent non-fast-forward merges by rebasing feature branches before merging them with `master`.
