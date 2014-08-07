@@ -1,4 +1,4 @@
-## Cherry-Picking
+# Cherry-Picking
 
 What `git cherry-pick` does is take one or more commits, and replay them on top of the current commit. Imagine a repository with the following history graph.
 

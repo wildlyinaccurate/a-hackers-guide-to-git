@@ -1,8 +1,8 @@
-## Toolkit
+# Toolkit
 
 With a solid understanding of Git's inner workings, some of the more advanced Git tools start to make more sense.
 
-### git-reflog
+## git-reflog
 
 Whenever you make a change in Git that affects the tip of a branch, Git records information about that change in what's called the reflog. Usually you shouldn't need to look at these logs, but sometimes they can come in _very_ handy.
 
@@ -50,7 +50,7 @@ Note that Git's reflog is only a record of changes **for your local repository**
 
 Depending on the situation, you may find `git fsck` more suitable for recovering lost commits.
 
-### git-fsck
+## git-fsck
 
 In a way, Git's object storage works like a primitive file system -- objects are like files on a hard drive, and their hashes are the objects' physical address on the disk. The Git index is exactly like the index of a file system, in that it contains references which point at an object's physical location.
 
@@ -78,7 +78,7 @@ dangling commit f71bb43907bffe0bce2967504341a0ece7a8cb68
 
 For simple cases, `git reflog` may be preferred. Where `git fsck` excels over `git reflog`, though, is when you need to find objects which you never referenced in your local repository (and therefore would not be in your reflog). An example of this is when you delete a remote branch through an interface like GitHub. Assuming the objects haven't been garbage-collected, you can clone the remote repository and use `git fsck` to recover the deleted branch.
 
-### git-stash
+## git-stash
 
 `git stash` takes all changes to your working tree and index, and "stashes" them away, giving you a clean working tree. You can then retrieve those changes from your stash and re-apply them to the working tree at any time with `git stash apply`. A common use for the `stash` command is to save some half-finished changes in order to checkout another branch.
 
@@ -162,7 +162,7 @@ This gives us a history that looks a little like this:
 
 In this history graph, the tree of commit **C** contains the changes to the working tree. Commit **C**'s first parent is the commit that `HEAD` pointed to when the stash was created (commit **A**). The second parent (commit **B**) contains the changes to the index. It is with these two commits that Git is able to re-apply your stashed changes.
 
-### git-describe
+## git-describe
 
 Git's `describe` command is summed up pretty neatly in the documentation:
 
@@ -186,7 +186,7 @@ $ git describe --abbrev=0 2db66f
 v1.2.15
 ```
 
-### git-rev-parse
+## git-rev-parse
 
 `git rev-parse` is an ancillary plumbing command which takes a wide range of inputs and returns one or more commit hashes. The most common use case is figuring out which commit a tag or branch points to.
 
@@ -197,7 +197,7 @@ $ git rev-parse --short v1.2.15
 2a46f5e
 ```
 
-### git-bisect
+## git-bisect
 
 `git bisect` is an indispensable tool when you need to figure out which commit introduced a breaking change. The `bisect` command does a binary search through your commit history to help you find the breaking change as quickly as possible. To get started, simply run `git bisect start`, and tell Git that the commit you're currently on is broken with `git bisect bad`. Then, you can give Git a commit that you know is working with `git bisect good <commit>`.
 

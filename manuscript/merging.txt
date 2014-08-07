@@ -1,4 +1,4 @@
-## Merging
+# Merging
 
 Merging in Git is the process of joining two histories (usually branches) together. Let's start with a simple example. Say you've created a new feature branch from `master`, and done some work on it.
 

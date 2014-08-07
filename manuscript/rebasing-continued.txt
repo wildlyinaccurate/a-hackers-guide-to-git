@@ -1,4 +1,4 @@
-## Rebasing (Continued)
+# Rebasing (Continued)
 
 While the example in _Cherry-Picking_ worked, it's not practical. In Git, rebasing allows us to replace our verbose cherry-pick workflow...
 

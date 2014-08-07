@@ -1,4 +1,4 @@
-## Commits
+# Commits
 
 A commit object is essentially a pointer that contains a few pieces of important metadata. The commit itself has a hash, which is built from a combination of the metadata that it contains:
 

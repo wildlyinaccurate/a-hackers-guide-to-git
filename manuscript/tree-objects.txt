@@ -1,4 +1,4 @@
-## Tree Objects
+# Tree Objects
 
 A tree object in Git can be thought of as a directory. It contains a list of blobs (files) and other tree objects (sub-directories). Imagine we had a simple repository, with a `README` file and a `src/` directory containing a `hello.c` file.
 

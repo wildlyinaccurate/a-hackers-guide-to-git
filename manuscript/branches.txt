@@ -1,4 +1,4 @@
-## Branches
+# Branches
 
 Git's branches are often touted as being one of its strongest features. This is because branches in Git are very lightweight, compared to other VCS where a branch is usually a clone of the entire repository.
 

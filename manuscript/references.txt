@@ -1,4 +1,4 @@
-## References
+# References
 
 In previous sections, we saw how objects in Git are identified by a hash. Since we want to manipulate objects quite often in Git, it's important to know their hashes. You could run all your Git commands referencing each object's hash, like `git show d409ca7`, but that would require you to remember the hash of every object you want to manipulate.
 

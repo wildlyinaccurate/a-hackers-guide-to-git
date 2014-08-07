@@ -1,4 +1,4 @@
-## Tags
+# Tags
 
 There are two types of tags in Git -- **lightweight tags** and **annotated tags**.
 

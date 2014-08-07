@@ -1,4 +1,4 @@
-## Introduction
+# Introduction
 
 Git is currently the most widely used version control system in the world, mostly thanks to GitHub. By that measure, I’d argue that it’s also the most misunderstood version control system in the world.
 

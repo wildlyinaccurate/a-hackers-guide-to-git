@@ -1,4 +1,4 @@
-## Repositories
+# Repositories
 
 At the core of Git, like other VCS, is the repository. A Git repository is really just a simple key-value data store. This is where Git stores, among other things:
 

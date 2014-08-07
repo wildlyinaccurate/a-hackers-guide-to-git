@@ -1,4 +1,4 @@
-## Rebasing
+# Rebasing
 
 Rebasing is without a doubt one of Git's most misunderstood features. For most people, `git rebase` is a command that should be avoided at all costs. This is probably due to the extraordinary amount of scaremongering around rebasing. _"Rebase Considered Harmful"_, and _"Please, stay away from rebase" _are just two of the many anti-rebase articles you will find in the vast archives of the Internet.
 

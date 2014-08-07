@@ -1,4 +1,4 @@
-## Remotes
+# Remotes
 
 In order to collaborate on any Git project, you need to utilise at least one remote repository. Unlike centralised VCS which require a dedicated server daemon, a Git remote is simply another Git repository. In order to demonstrate this, we first need to understand the concept of a _bare_ repository.
 
@@ -60,7 +60,7 @@ fatal: This operation must be run in a work tree
 
 The intended use of this repository is for other collaborators to `clone` and `pull` changes from, as well as `push` their own changes to.
 
-### Cloning
+## Cloning
 
 Now that we've set up a bare repository, let's look at the concept of _cloning_ a repository. The `git clone` command is really just a shortcut which does a few things for you. With its default configuration, it will:
 
@@ -122,7 +122,7 @@ First, it contains a `remote` listing for "origin", which is the default name gi
 
 Below that is a `branch` listing. This is the configuration for a _remote-tracking branch_. But before we get into that, let's store some data in the remote repository.
 
-### Pushing
+## Pushing
 
 We've just cloned a completely empty repository, and we want to start working on it.
 
@@ -182,7 +182,7 @@ As we expected, the remote repository now contains a `master` branch which point
 
 Essentially what happened when we ran `git push`, is Git updated the remote's references, and sent it any objects required to build those references. In this case, `git push` updated the remote's `master` to point at `5d591d5`, and sent it the `5d591d5` commit object as well as any tree and blob objects related to that commit.
 
-### Remote-Tracking Branches
+## Remote-Tracking Branches
 
 As we saw in _Cloning_, a remote-tracking branch is essentially just a few lines in `.git/config`. Let's take a look at those lines again.
 
@@ -198,7 +198,7 @@ The rest of the configuration specifies that when this remote-tracking branch is
 
 Besides storing this configuration, Git also stores a local copy of the remote branch. This is simply stored as a reference in `.git/refs/remotes/<remote>/<branch>`. We'll see more about how this works in _Fetching_.
 
-### Fetching
+## Fetching
 
 The `git fetch` command is fairly simple. It takes the name of a remote (unless used with the `--all` flag, which fetches all remotes), and retrieves any new references and all objects necessary to complete them.
 
@@ -289,7 +289,7 @@ $ cat .git/config
     merge = refs/heads/feature-branch
 ```
 
-### Pulling
+## Pulling
 
 The `git pull` command is, like `git clone`, a nice shortcut which essentially just runs a few lower-level commands. In short, with the format `git pull <remote> <branch>`, the `git pull` command does the following:
 
